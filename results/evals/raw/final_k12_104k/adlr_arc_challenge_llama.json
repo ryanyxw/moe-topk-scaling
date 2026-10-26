@@ -1,0 +1,131 @@
+{
+  "results": {
+    "adlr_arc_challenge_llama": {
+      "alias": "adlr_arc_challenge_llama",
+      "acc,none": 0.2551194539249147,
+      "acc_stderr,none": 0.012739038695202038,
+      "acc_norm,none": 0.2551194539249147,
+      "acc_norm_stderr,none": 0.012739038695202038
+    }
+  },
+  "group_subtasks": {
+    "adlr_arc_challenge_llama": []
+  },
+  "configs": {
+    "adlr_arc_challenge_llama": {
+      "task": "adlr_arc_challenge_llama",
+      "dataset_path": "allenai/ai2_arc",
+      "dataset_name": "ARC-Challenge",
+      "training_split": "train",
+      "validation_split": "validation",
+      "test_split": "test",
+      "doc_to_text": "def doc_to_text_llama( doc):\n    # NOTE: Some `doc[\"answerKey\"]`s are in numeric string format being one\n    # of {'1', '2', '3', '4', '5'}. We map them back to letters.\n    letters = [\"A\", \"B\", \"C\", \"D\", \"E\"]\n    query = f\"\"\"Question: {doc[\"question\"]}\"\"\"\n    for idx, c in enumerate(doc[\"choices\"][\"text\"]):\n        query += f\"\"\"\\n{letters[idx]}. {doc[\"choices\"][\"text\"][idx]}\"\"\"\n    query += \"\\nAnswer:\"\n\n    return query\n",
+      "doc_to_target": "def doc_to_target_llama(doc):\n    # NOTE: Some `doc[\"answerKey\"]`s are in numeric string format being one\n    # of {'1', '2', '3', '4', '5'}. We map them back to letters.\n    num_to_letter = {\"1\": \"A\", \"2\": \"B\", \"3\": \"C\", \"4\": \"D\", \"5\": \"E\"}\n    doc[\"answerKey\"] = num_to_letter.get(doc[\"answerKey\"], doc[\"answerKey\"])\n    return [\"A\", \"B\", \"C\", \"D\", \"E\"].index(doc[\"answerKey\"])\n",
+      "unsafe_code": false,
+      "doc_to_choice": "def doc_to_choice_llama(doc):\n    letters = [\"A\", \"B\", \"C\", \"D\", \"E\"]\n    choices = []\n    for idx, _ in enumerate(doc[\"choices\"][\"text\"]):\n        choices.append(f\"\"\"{letters[idx]}\"\"\")\n    return choices\n",
+      "description": "",
+      "target_delimiter": " ",
+      "fewshot_delimiter": "\n\n",
+      "num_fewshot": 25,
+      "metric_list": [
+        {
+          "metric": "acc",
+          "aggregation": "mean",
+          "higher_is_better": true
+        },
+        {
+          "metric": "acc_norm",
+          "aggregation": "mean",
+          "higher_is_better": true
+        }
+      ],
+      "output_type": "multiple_choice",
+      "repeats": 1,
+      "should_decontaminate": true,
+      "doc_to_decontamination_query": "Question: {{question}}\nAnswer:",
+      "metadata": {
+        "version": 1.0,
+        "base_url": "http://localhost:3825",
+        "model": "final_k12_104k",
+        "tokenized_requests": false,
+        "tokenizer": "/tokenizer",
+        "tokenizer_backend": "huggingface",
+        "num_concurrent": 32,
+        "timeout": 600,
+        "max_retries": 5,
+        "stream": false
+      }
+    }
+  },
+  "versions": {
+    "adlr_arc_challenge_llama": 1.0
+  },
+  "n-shot": {
+    "adlr_arc_challenge_llama": 25
+  },
+  "higher_is_better": {
+    "adlr_arc_challenge_llama": {
+      "acc": true,
+      "acc_norm": true
+    }
+  },
+  "n-samples": {
+    "adlr_arc_challenge_llama": {
+      "original": 1172,
+      "effective": 1172
+    }
+  },
+  "config": {
+    "model": "local-completions",
+    "model_args": "base_url=http://localhost:3825,model=final_k12_104k,tokenized_requests=False,tokenizer=/tokenizer,tokenizer_backend=huggingface,num_concurrent=32,timeout=600,max_retries=5,stream=False",
+    "batch_size": "32",
+    "batch_sizes": [],
+    "device": null,
+    "use_cache": "/results/lm_cache",
+    "limit": null,
+    "downsampling_ratio": null,
+    "bootstrap_iters": 100000,
+    "gen_kwargs": {
+      "temperature": 1.0,
+      "top_p": 1.0
+    },
+    "random_seed": 0,
+    "numpy_seed": 1234,
+    "torch_seed": 1234,
+    "fewshot_seed": 1234
+  },
+  "git_hash": null,
+  "date": 1793006796.9095898,
+  "pretty_env_info": "name 'get_pretty_env_info' is not defined",
+  "transformers_version": "4.50.3",
+  "lm_eval_version": "No package metadata was found for lm_eval",
+  "upper_git_hash": null,
+  "tokenizer_pad_token": [
+    null,
+    "None"
+  ],
+  "tokenizer_eos_token": [
+    "<|im_end|>",
+    "11"
+  ],
+  "tokenizer_bos_token": [
+    "<s>",
+    "1"
+  ],
+  "eot_token_id": 11,
+  "max_length": 2047,
+  "task_hashes": {
+    "adlr_arc_challenge_llama": "6fea118e75d2672d50d8992a70c1d54d3a5ed294e3c1ac414e775a67a2b5de34"
+  },
+  "model_source": "local-completions",
+  "model_name": "final_k12_104k",
+  "model_name_sanitized": "final_k12_104k",
+  "system_instruction": null,
+  "system_instruction_sha": null,
+  "fewshot_as_multiturn": false,
+  "chat_template": null,
+  "chat_template_sha": null,
+  "start_time": 1438692.79055989,
+  "end_time": 1438922.515518496,
+  "total_evaluation_time_seconds": "229.72495860606432"
+}
