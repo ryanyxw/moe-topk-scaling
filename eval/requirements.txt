@@ -1,0 +1,2 @@
+nemo-evaluator-launcher==0.2.6
+nemo-evaluator==0.2.8
