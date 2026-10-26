@@ -1,0 +1,47 @@
+# CUDA 12.9 build of the Megatron-Bridge stack. The repo's official image is CUDA 13
+# (pytorch:26.09), which can't run on this host's 550 driver. CUDA 12.x runs on it
+# via minor-version compatibility.
+FROM nvcr.io/nvidia/cuda:12.9.1-cudnn-devel-ubuntu24.04 AS deps
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    VIRTUAL_ENV=/opt/venv PATH=/opt/venv/bin:/root/.local/bin:$PATH \
+    TORCH_CUDA_ARCH_LIST=9.0 MAX_JOBS=64 NVTE_FRAMEWORK=pytorch \
+    UV_LINK_MODE=copy UV_HTTP_TIMEOUT=300
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      python3.12 python3.12-dev python3.12-venv git curl ca-certificates patch ninja-build \
+      build-essential && rm -rf /var/lib/apt/lists/*
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh && uv venv -p python3.12 /opt/venv
+RUN uv pip install torch==2.13.0 --index-url https://download.pytorch.org/whl/cu129 && \
+    uv pip install numpy packaging wheel setuptools pybind11 ninja psutil einops
+# Transformer Engine (prebuilt CUDA 12 core + torch extension built against our torch)
+# Build TE against the pip cuDNN/NCCL that torch loads at runtime (system ones are too old).
+RUN NV=$(python -c "import nvidia, os; print(os.path.dirname(nvidia.__path__[0]))")/nvidia && \
+    python -c "import importlib.metadata as m; print('nccl', m.version('nvidia-nccl-cu12'), 'cudnn', m.version('nvidia-cudnn-cu12'))" && \
+    ln -sf $NV/nccl/lib/libnccl.so.2 $NV/nccl/lib/libnccl.so && \
+    for f in $NV/cudnn/lib/libcudnn*.so.9; do ln -sf $f ${f%.9}; done && \
+    CUDNN_PATH=$NV/cudnn CUDNN_HOME=$NV/cudnn NCCL_HOME=$NV/nccl \
+    CPATH=$NV/cudnn/include:$NV/nccl/include LIBRARY_PATH=$NV/cudnn/lib:$NV/nccl/lib \
+    uv pip install --no-build-isolation "transformer-engine[pytorch,core_cu12]==2.20.2"
+# causal-conv1d + mamba-ssm 2.3.1 with the repo's patch (drops -std=c++17 for torch 2.13)
+RUN CAUSAL_CONV1D_FORCE_BUILD=TRUE uv pip install --no-build-isolation --no-deps causal-conv1d==1.7.0
+COPY env/mamba.patch /tmp/mamba.patch
+RUN cd /tmp && curl -fL -o mamba.tar.gz https://files.pythonhosted.org/packages/source/m/mamba_ssm/mamba_ssm-2.3.1.tar.gz && \
+    tar xzf mamba.tar.gz && patch --batch --forward -d mamba_ssm-2.3.1 -p1 < /tmp/mamba.patch && \
+    MAMBA_FORCE_BUILD=TRUE uv pip install --no-build-isolation --no-deps ./mamba_ssm-2.3.1 && rm -rf /tmp/mamba*
+# Megatron-Core + Megatron-Bridge (editable; host checkout is bind-mounted over /opt/Megatron-Bridge at runtime)
+# NVIDIA Apex CUDA extensions (fused_weight_gradient_mlp_cuda for gradient_accumulation_fusion), as in NGC images.
+RUN cd /tmp && git clone --depth 1 https://github.com/NVIDIA/apex && cd apex && \
+    APEX_CPP_EXT=1 APEX_CUDA_EXT=1 NVCC_APPEND_FLAGS="--threads 4" \
+    uv pip install --no-build-isolation --no-deps -v . 2>&1 | tail -3 && cd / && rm -rf /tmp/apex && \
+    python -c "import torch, fused_weight_gradient_mlp_cuda; print('apex ok')"
+FROM deps AS final
+RUN ln -sf /usr/bin/python3.12-config /usr/local/bin/python3-config
+COPY third_party/Megatron-Bridge /opt/Megatron-Bridge
+# Exact pins from uv.lock (exported to req_filtered.txt), minus the GPU packages built above and a few
+# optional native/git builds not needed for pretraining. --no-deps keeps the torch/TE built above.
+COPY env/req_filtered.txt /tmp/req.txt
+RUN uv pip install --no-deps --index-strategy unsafe-best-match \
+      --extra-index-url https://pypi.nvidia.com --extra-index-url https://flashinfer.ai/whl/ -r /tmp/req.txt && \
+    cd /opt/Megatron-Bridge && uv pip install --no-deps --no-build-isolation -e 3rdparty/Megatron-LM -e .
+ENV LD_LIBRARY_PATH=/opt/venv/lib/python3.12/site-packages/nvidia/cudnn/lib:/opt/venv/lib/python3.12/site-packages/nvidia/nccl/lib:/usr/local/cuda/lib64
+WORKDIR /opt/Megatron-Bridge
