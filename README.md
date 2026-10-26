@@ -139,3 +139,19 @@ Notes on the export:
 (`bench/sweeps/sweep*.sh`, summarized by `bench/summarize.py`; logs in `results/bench_logs/`). The best setup reached
 74K tokens/s (27.8% MFU, 275 TFLOP/s per GPU): PP6, GBS 384, MBS 2, optimizer CPU offload, MoE activation
 recompute on the first 3 pipeline stages (`s7_rcstage3`, measured with forced-balanced routing).
+
+## Verification of this repo
+
+Run from a fresh checkout of this repo on the original machine (26 Oct 2026):
+
+| Check | Result |
+|---|---|
+| Re-tokenize the validation shard (`data/tokenize_parquet.py`) | `.bin` and `.idx` byte-identical to the shard used for training |
+| Restart `c1_k8` from scratch (`train/launch.sh`, same args) for 30 steps | same step count and schedule; loss at steps 10/20/30: 10.9977 / 9.3131 / 7.9230 vs 10.9977 / 9.3132 / 7.9218 originally |
+| Re-export `c1_k8` (`eval/export_all.sh`) | safetensors, config, tokenizer and remote code byte-identical to the evaluated export |
+| Re-serve and re-evaluate `c1_k8` (`eval/worker.sh`) | served validation loss 2.7188 (identical); the 10 scores are within ±0.5 points of the originals (OBQA, SciQ, LAMBADA identical), inside one standard error |
+| Rerun fits and plots (`analysis/`), `eval/collect.py`, `eval/report_evals.py` | same numbers (k*, joint-fit parameters, the 2.253 prediction), identical results.json, figures and report section |
+
+The small eval differences come from vLLM's batched bf16 inference: a request's log-probs depend slightly on which
+other requests share its batch, so reruns are not bit-exact. The same holds for training, which allows
+nondeterministic kernels (`NVTE_ALLOW_NONDETERMINISTIC_ALGO=1`).
