@@ -1,0 +1,52 @@
+# Job queue for scheduler.py, exactly as used for the study (one job per line: <name> <slot> <train.py args>).
+# Slots: pair = GPUs (0,2) (3,4) (5,6); single = GPU 7; quad = 0,2,3,4; six = 0,2,3,4,5,6. GPU 1 is never used.
+# A job with --parent waits for that run to finish and resumes from its cooldown-start checkpoint.
+#
+# Resume test, not part of the study (r_k8 was a short run used to check exact checkpoint resume):
+# r_k8_ext2 pair --topk 8 --ep 2 --mbs 4 --recompute moe_act --grouped-gemm cutlass --iters 60 --warmup 4 --load /mnt/nvme/scaling/runs/r_k8/ckpt --load-step 32 --eval-interval 30 --eval-iters 2 --log-interval 1 --np-interval 0
+c0_k4_lr1.5e-3 pair --topk 4 --lr 1.5e-3 --flops 2e18 --ep 2 --mbs 4 --grouped-gemm cutlass --eval-iters 20 --eval-interval 1000 --log-interval 10 --no-save
+c0_k4_lr3e-3 pair --topk 4 --lr 3e-3 --flops 2e18 --ep 2 --mbs 4 --grouped-gemm cutlass --eval-iters 20 --eval-interval 1000 --log-interval 10 --no-save
+c0_k4_lr6e-3 pair --topk 4 --lr 6e-3 --flops 2e18 --ep 2 --mbs 4 --grouped-gemm cutlass --eval-iters 20 --eval-interval 1000 --log-interval 10 --no-save
+c0_k1_lr1.5e-3 pair --topk 1 --lr 1.5e-3 --flops 2e18 --ep 2 --mbs 4 --grouped-gemm cutlass --eval-iters 20 --eval-interval 1000 --log-interval 10 --no-save
+c0_k1_lr3e-3 pair --topk 1 --lr 3e-3 --flops 2e18 --ep 2 --mbs 4 --grouped-gemm cutlass --eval-iters 20 --eval-interval 1000 --log-interval 10 --no-save
+c0_k4_lr7.5e-4 pair --topk 4 --lr 7.5e-4 --flops 2e18 --ep 2 --mbs 4 --grouped-gemm cutlass --eval-iters 20 --eval-interval 1000 --log-interval 10 --no-save
+c0_k1_lr7.5e-4 pair --topk 1 --lr 7.5e-4 --flops 2e18 --ep 2 --mbs 4 --grouped-gemm cutlass --eval-iters 20 --eval-interval 1000 --log-interval 10 --no-save
+# dropped (k4 shows 6e-3 far too high): c0_k1_lr6e-3 pair --topk 1 --lr 6e-3 --flops 2e18 --ep 2 --mbs 4 --grouped-gemm cutlass --eval-iters 20 --eval-interval 1000 --log-interval 10 --no-save
+c0_k16_lr1.5e-3 pair --topk 16 --lr 1.5e-3 --flops 2e18 --ep 2 --mbs 2 --recompute moe_act --grouped-gemm cutlass --eval-iters 20 --eval-interval 1000 --log-interval 10 --no-save
+c0_k16_lr3e-3 pair --topk 16 --lr 3e-3 --flops 2e18 --ep 2 --mbs 2 --recompute moe_act --grouped-gemm cutlass --eval-iters 20 --eval-interval 1000 --log-interval 10 --no-save
+c0_k16_lr7.5e-4 pair --topk 16 --lr 7.5e-4 --flops 2e18 --ep 2 --mbs 2 --recompute moe_act --grouped-gemm cutlass --eval-iters 20 --eval-interval 1000 --log-interval 10 --no-save
+# dropped (k4 shows 6e-3 far too high): c0_k16_lr6e-3 pair --topk 16 --lr 6e-3 --flops 2e18 --ep 2 --mbs 2 --recompute moe_act --grouped-gemm cutlass --eval-iters 20 --eval-interval 1000 --log-interval 10 --no-save
+c0_k4_lr3e-3_seed2 single --topk 4 --lr 3e-3 --flops 2e18 --ep 1 --mbs 1 --grouped-gemm cutlass --eval-iters 20 --eval-interval 1000 --log-interval 10 --no-save --seed 2 --log-interval 1
+# ---- isoFLOP sweep at lr 1.5e-3 (best for k=1,4,16 at C0) ----
+c1_k4 pair --topk 4 --flops 8e18 --ep 2 --mbs 4 --grouped-gemm cutlass --eval-iters 20 --eval-interval 1000 --log-interval 10 --lr 1.5e-3
+c1_k8 pair --topk 8 --flops 8e18 --ep 2 --mbs 4 --recompute moe_act --grouped-gemm cutlass --eval-iters 20 --eval-interval 1000 --log-interval 10 --lr 1.5e-3
+c1_k16 pair --topk 16 --flops 8e18 --ep 2 --mbs 2 --recompute moe_act --grouped-gemm cutlass --eval-iters 20 --eval-interval 1000 --log-interval 10 --lr 1.5e-3
+c1_k2 pair --topk 2 --flops 8e18 --ep 2 --mbs 4 --grouped-gemm cutlass --eval-iters 20 --eval-interval 1000 --log-interval 10 --lr 1.5e-3
+c1_k1 pair --topk 1 --flops 8e18 --ep 2 --mbs 4 --grouped-gemm cutlass --eval-iters 20 --eval-interval 1000 --log-interval 10 --lr 1.5e-3
+c2_k32 pair --topk 32 --flops 2e19 --ep 2 --mbs 2 --recompute moe_act --grouped-gemm cutlass --eval-iters 20 --eval-interval 1000 --log-interval 10 --lr 1.5e-3
+c2_k4 pair --topk 4 --flops 2e19 --parent c1_k4 --ep 2 --mbs 4 --grouped-gemm cutlass --eval-iters 20 --eval-interval 1000 --log-interval 10 --lr 1.5e-3
+c2_k8 pair --topk 8 --flops 2e19 --parent c1_k8 --ep 2 --mbs 4 --recompute moe_act --grouped-gemm cutlass --eval-iters 20 --eval-interval 1000 --log-interval 10 --lr 1.5e-3
+c2_k16 pair --topk 16 --flops 2e19 --parent c1_k16 --ep 2 --mbs 2 --recompute moe_act --grouped-gemm cutlass --eval-iters 20 --eval-interval 1000 --log-interval 10 --lr 1.5e-3
+c3_k32 pair --topk 32 --flops 5e19 --parent c2_k32 --ep 2 --mbs 2 --recompute moe_act --grouped-gemm cutlass --eval-iters 20 --eval-interval 1000 --log-interval 10 --lr 1.5e-3
+c3_k4 pair --topk 4 --flops 5e19 --parent c2_k4 --ep 2 --mbs 4 --grouped-gemm cutlass --eval-iters 20 --eval-interval 1000 --log-interval 10 --lr 1.5e-3
+c3_k16 pair --topk 16 --flops 5e19 --parent c2_k16 --ep 2 --mbs 2 --recompute moe_act --grouped-gemm cutlass --eval-iters 20 --eval-interval 1000 --log-interval 10 --lr 1.5e-3
+c3_k8 quad --topk 8 --flops 5e19 --parent c2_k8 --ep 2 --mbs 4 --recompute moe_act --grouped-gemm cutlass --eval-iters 20 --eval-interval 1000 --log-interval 10 --lr 1.5e-3
+# c2_k2 moved after C3: lowest-value C2 point, fills leftover pair time
+# held: would block GPUs 5,6 for the final run until Mon 03:00 -- c2_k2 pair --topk 2 --flops 2e19 --parent c1_k2 --ep 2 --mbs 4 --grouped-gemm cutlass --eval-iters 20 --eval-interval 1000 --log-interval 10 --lr 1.5e-3 --after c3_k8
+# single-GPU extra C0 points (mini isoFLOP)
+c0_k2_lr1.5e-3 single --topk 2 --flops 2e18 --ep 1 --mbs 1 --grouped-gemm cutlass --eval-iters 20 --eval-interval 1000 --log-interval 10 --lr 1.5e-3 --no-save
+c0_k8_lr1.5e-3 single --topk 8 --flops 2e18 --ep 1 --mbs 1 --recompute moe_act --grouped-gemm cutlass --eval-iters 20 --eval-interval 1000 --log-interval 10 --lr 1.5e-3 --no-save
+c0_k4_lr3e-3_1gpu single --topk 4 --lr 3e-3 --flops 2e18 --ep 1 --mbs 1 --grouped-gemm cutlass --eval-iters 20 --eval-interval 1000 --log-interval 10 --no-save
+c0_k4_lr1.5e-3_1gpu single --topk 4 --flops 2e18 --ep 1 --mbs 1 --grouped-gemm cutlass --eval-iters 20 --eval-interval 1000 --log-interval 10 --lr 1.5e-3 --no-save
+c0_k16_lr1.5e-3_1gpu single --topk 16 --flops 2e18 --ep 1 --mbs 1 --recompute moe_act --grouped-gemm cutlass --eval-iters 20 --eval-interval 1000 --log-interval 10 --lr 1.5e-3 --no-save
+# C4 isoFLOP (1e20), resumed from C3 cooldown-start checkpoints; k16 first (longest)
+c4_k16 pair --topk 16 --flops 1e20 --parent c3_k16 --ep 2 --mbs 2 --recompute moe_act --grouped-gemm cutlass --eval-iters 20 --eval-interval 1000 --log-interval 10 --lr 1.5e-3
+# 40-shard blend runs out at step 28770 (3,682,560 samples); continue from the step-28500 ckpt on fresh shards 40-79.
+# As run: c4_k4 and c4_k8 first ran WITHOUT the last three flags and crashed at step 28770 (StopIteration); the flags
+# were then added here and the scheduler's automatic retry resumed from the run's own rolling checkpoint (step 28500).
+# To reproduce, do the same: start without the flags, add them after the crash. (With --parent on a fresh start the
+# offset is larger than the consumed samples and train.py refuses to start.)
+c4_k4 pair --topk 4 --flops 1e20 --parent c3_k4 --ep 2 --mbs 4 --grouped-gemm cutlass --eval-iters 20 --eval-interval 1000 --log-interval 10 --lr 1.5e-3 --shard-start 40 --train-shards 40 --data-offset 3648000
+c4_k8 pair --topk 8 --flops 1e20 --parent c3_k8 --ep 2 --mbs 4 --recompute moe_act --grouped-gemm cutlass --eval-iters 20 --eval-interval 1000 --log-interval 10 --lr 1.5e-3 --shard-start 40 --train-shards 40 --data-offset 3648000
+# Final run: top-k 12 (fitted optimum at 4.5e20), 134B tokens, all 471 shards, DP6/EP2, GBS 126 (=6x21), 4 branch ckpts
+final_k12 six --topk 12 --flops 4.5e20 --gbs 126 --ep 2 --mbs 3 --recompute moe_act --grouped-gemm cutlass --eval-iters 20 --eval-interval 1000 --log-interval 10 --lr 1.5e-3 --train-shards 471 --save-splits 4
